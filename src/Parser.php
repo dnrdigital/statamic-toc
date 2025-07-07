@@ -105,7 +105,8 @@ class Parser
      */
     public function depth($depth)
     {
-        $this->maxLevel = $depth + $this->minLevel - 1;
+        // Store the original depth value to calculate maxLevel correctly
+        $this->maxLevel = $this->minLevel + $depth - 1;
 
         return $this;
     }
@@ -129,10 +130,12 @@ class Parser
             $start = 6;
         }
 
+        // Calculate the current depth before updating minLevel
+        $currentDepth = $this->maxLevel - $this->minLevel + 1;
         $this->minLevel = $start;
-        // our depth is relative to the minLevel. So we need to update is if
+        // our depth is relative to the minLevel. So we need to update it if
         // the minLevel changes
-        $this->depth($this->maxLevel);
+        $this->depth($currentDepth);
 
         return $this;
     }

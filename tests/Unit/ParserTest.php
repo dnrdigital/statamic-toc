@@ -142,8 +142,8 @@ class ParserTest extends TestCase
         if (isset($child['is_root'])) {
             $this->assertIsBool($child['is_root']);
         }
-        if (isset($child['has_hildren'])) {
-            $this->assertIsBool($child['has_hildren']);
+        if (isset($child['has_children'])) {
+            $this->assertIsBool($child['has_children']);
             $this->assertIsInt($child['total_children']);
         }
         if ($child['level'] > 1) {
