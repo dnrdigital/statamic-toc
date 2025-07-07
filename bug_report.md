@@ -1,7 +1,7 @@
 # Bug Report: Statamic ToC Addon
 
 ## Summary
-This report details 3 bugs found and fixed in the Statamic ToC addon codebase. The bugs range from missing dependencies to logic errors and typos that could impact functionality and testing.
+This report details **4 bugs** found and fixed in the Statamic ToC addon codebase. The bugs range from missing dependencies to logic errors, typos, and unsafe property access that could impact functionality and cause fatal errors.
 
 ## Bug 1: Missing Dependency Declaration for League CommonMark
 
@@ -115,6 +115,68 @@ $parser->depth(3)->from('h2'); // Would incorrectly calculate maxLevel
 
 ---
 
+## Bug 4: Unsafe Property Access in Bard Content Processing
+
+### **Severity:** High  
+### **Type:** Logic Error / Safety Issue
+### **Location:** `src/Parser.php` lines 284-285 and 296-301
+### **GitHub Issue:** #26
+
+### **Description:**
+The parser code assumes certain array structures exist without proper validation, leading to "Undefined property" or "Undefined index" errors when processing malformed or incomplete Bard content structures. This causes fatal errors that break entire page rendering.
+
+### **Impact:**
+- Fatal crashes when processing malformed Bard content
+- "Undefined index: attrs" errors when attrs structure is missing
+- "Undefined index: 0" errors when content array is empty
+- "Undefined index: text" errors when text property is missing
+- Poor user experience with white screen errors
+- Difficult debugging with unclear error messages
+
+### **Root Cause:**
+Two areas in the code accessed array properties without checking if they exist:
+1. Filter condition directly accessing `$item['attrs']['level']` without checking if `attrs` exists
+2. Content processing accessing `$heading['content'][0]` without validating the array structure
+
+### **Fix Applied:**
+
+**1. Safe Property Access in Filter Condition:**
+```php
+// Before:
+return is_array($item) && $item['type'] === 'heading' && $item['attrs']['level'] >= $this->minLevel && $item['attrs']['level'] <= $this->maxLevel;
+
+// After:
+return is_array($item) 
+    && isset($item['type']) 
+    && $item['type'] === 'heading' 
+    && isset($item['attrs']['level']) 
+    && $item['attrs']['level'] >= $this->minLevel 
+    && $item['attrs']['level'] <= $this->maxLevel;
+```
+
+**2. Comprehensive Content Validation:**
+```php
+// Before:
+if (! isset($heading['content']) || $heading['content'][0]['type'] !== 'text') {
+    return;
+}
+
+// After:
+if (! isset($heading['content']) 
+    || ! is_array($heading['content']) 
+    || empty($heading['content']) 
+    || ! isset($heading['content'][0]['type']) 
+    || $heading['content'][0]['type'] !== 'text'
+    || ! isset($heading['content'][0]['text'])) {
+    return;
+}
+```
+
+### **Testing:**
+Created comprehensive test suite `tests/Unit/ParserSafetyTest.php` covering all malformed content scenarios.
+
+---
+
 ## Additional Observations
 
 ### **Potential Security Considerations:**
@@ -130,12 +192,14 @@ The HTML parsing in `generateFromHtml()` creates a new DOMDocument for every cal
 1. **Add integration tests** for markdown processing to ensure the CommonMark dependency works correctly
 2. **Add tests for method chaining** to verify the depth/from logic works in all orders
 3. **Consider adding security tests** for HTML injection scenarios
+4. **Test with malformed Bard content** to ensure robustness
 
 ## Conclusion
 
-All three bugs have been successfully identified and fixed:
+All four bugs have been successfully identified and fixed:
 - ✅ Missing dependency added to composer.json
 - ✅ Test typo corrected
 - ✅ Logic error in depth calculation resolved
+- ✅ Unsafe property access made safe with proper validation
 
-The fixes ensure proper functionality, better test coverage, and correct behavior regardless of method call order.
+The fixes ensure proper functionality, better test coverage, correct behavior regardless of method call order, and robust handling of malformed content without fatal errors.
