@@ -26,6 +26,12 @@ class Toc extends Tags
      */
     public function index()
     {
+        if ($this->params->get('when', true) === false) {
+            return [];
+        }
+        
+        // get the supported header-levels
+
         // get the supported header-levels
         $depth = $this->params->int("depth", 3);
         $start = $this->params->get('from', "h1");
